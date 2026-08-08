@@ -38,6 +38,7 @@ Coordinates are physical virtual-desktop screen coordinates. Negative coordinate
 cursor X Y
 ring X Y --diameter N
 rect X Y WIDTH HEIGHT [--label TEXT]
+steps --rect X Y WIDTH HEIGHT [--label TEXT] [--rect ...]...
 ```
 
 Every command accepts:
@@ -47,6 +48,21 @@ Every command accepts:
 ```
 
 Default duration: `2500` ms.
+
+### Multi-step guidance
+
+`steps` outlines several controls at once — ideal for guided flows where the human follows a numbered sequence. Labels show a step counter (`N/M`), and all rectangles render together for the whole duration:
+
+```bash
+python tools/screen_hint.py steps \
+  --rect 131 457 77 51 --label "1/4  Click 2" \
+  --rect 288 457 76 51 --label "2/4  Click +" \
+  --rect 131 457 77 51 --label "3/4  Click 2" \
+  --rect 288 510 76 51 --label "4/4  Click =" \
+  --duration-ms 10000
+```
+
+The first real integration test guided a user through `2 + 2` in Windows Calculator — the final Calculator state reported `4`.
 
 ## Why clicks pass through
 

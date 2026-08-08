@@ -51,6 +51,7 @@ Do not guess another profile's skill path. Do not edit another profile unless th
 python "<skill_dir>/scripts/screen_hint.py" cursor X Y --duration-ms 2500
 python "<skill_dir>/scripts/screen_hint.py" ring X Y --diameter 100 --duration-ms 2500
 python "<skill_dir>/scripts/screen_hint.py" rect X Y WIDTH HEIGHT --label "Click here" --duration-ms 3000
+python "<skill_dir>/scripts/screen_hint.py" steps --rect X Y WIDTH HEIGHT --label "1/4 ..." [--rect ...]... --duration-ms 10000
 ```
 
 Constraints:
@@ -59,7 +60,8 @@ Constraints:
 - rectangle width and height: positive integers;
 - ring diameter: positive integer;
 - coordinates: physical virtual-desktop screen coordinates;
-- negative coordinates are valid on monitors left or above the primary display.
+- negative coordinates are valid on monitors left or above the primary display;
+- `steps` accepts one or more `--rect` (each with `X Y WIDTH HEIGHT`); `--label` count must match `--rect` count (labels pad with empty strings if omitted).
 
 ## Guided-Click Workflow
 
