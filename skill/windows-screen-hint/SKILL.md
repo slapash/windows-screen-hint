@@ -152,6 +152,46 @@ for step in steps:
 
 Bounds in examples are illustrative. **Always** get fresh bounds from `uia_probe` first.
 
+## Click Watch — the universal "did the user do it?" check
+
+`scripts/click_watch.py` answers the question that UIA state alone cannot:
+**did the user actually click the target?** It installs a low-level global
+mouse hook (`WH_MOUSE_LL`) and reports the first click that lands inside the
+target rectangle.
+
+```bash
+python "<skill_dir>/scripts/click_watch.py" --x 279 --y 513 --w 43 --h 33 --timeout-ms 20000
+python "<skill_dir>/scripts/click_watch.py" --find "2" --app "Calculator" --timeout-ms 20000
+```
+
+- `--x/--y/--w/--h` — explicit physical screen rectangle; OR
+- `--find LABEL [--app APP]` — resolve the target via `uia_probe` first.
+- Exit 0 = clicked inside target (`{"clicked": true, "x":…, "y":…}`).
+- Exit 3 = timed out with no clicks; exit 4 = clicks happened but off-target
+  (the JSON includes every recorded click so you can say "you clicked at
+  (120,300), but the target was at (279,513,43,33)").
+
+**Why this exists:** many applications do not expose the state that would
+prove a click worked — canvas apps, games, custom-drawn controls, and even
+Calculator's history line. A mouse hook is software-agnostic: the target is
+just screen coordinates, which `uia_probe` already returns as physical
+pixels. For simple steps (click a button, select an option), click-watch is
+the verification. For steps whose *effect* matters (a window opened, a value
+changed), layer UIA state diff or a vision capture on top.
+
+**Tutor loop with click-watch:**
+1. `uia_probe --find "<label>"` → bounds (or use explicit rect).
+2. `screen_hint.py rect X Y W H --label "N/M …"` to point (background).
+3. `click_watch.py --x X --y Y --w W --h H --timeout-ms 20000` — blocks
+   until the user clicks the target, clicks elsewhere, or times out.
+4. On exit 0: step confirmed. On exit 3: re-point or re-plan. On exit 4:
+   tell the user where they clicked and re-point.
+5. For effect steps, re-run `uia_probe` after the confirmed click and diff.
+
+Verified 2026-08: WH_MOUSE_LL sees synthetic clicks (`SetCursorPos` +
+`mouse_event`) with physical coordinates when the process is per-monitor DPI
+aware — the same contract as the other two tools.
+
 ## Safety Contract
 
 - The renderer and probe draw/observe only; neither clicks, types, or logs screen content.
