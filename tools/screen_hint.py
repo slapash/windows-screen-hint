@@ -50,6 +50,7 @@ class Hint:
     diameter: int = 0
     label: str = ""
     duration_ms: int = 2500
+    items: tuple = ()
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -73,6 +74,21 @@ def build_parser() -> argparse.ArgumentParser:
     rect.add_argument("width", type=int)
     rect.add_argument("height", type=int)
     rect.add_argument("--label", default="")
+
+    steps = subparsers.add_parser(
+        "steps", help="Outline several controls at once (guided multi-step flow)"
+    )
+    steps.add_argument(
+        "--rect",
+        nargs=4,
+        type=int,
+        action="append",
+        metavar=("X", "Y", "W", "H"),
+        required=True,
+        help="One control rectangle; repeat for each step",
+    )
+    steps.add_argument("--label", action="append", default=[], metavar="TEXT")
+    steps.add_argument("--duration-ms", type=int, default=2500)
 
     for child in (cursor, ring, rect):
         child.add_argument("--duration-ms", type=int, default=2500)
@@ -109,6 +125,22 @@ def parse_cli(argv: Sequence[str] | None = None) -> Hint:
             duration_ms=args.duration_ms,
         )
 
+    if args.kind == "steps":
+        if args.label and len(args.label) != len(args.rect):
+            raise ValueError("steps --label count must match --rect count")
+        labels = args.label + [""] * (len(args.rect) - len(args.label))
+        items = tuple(
+            (x, y, width, height, label)
+            for (x, y, width, height), label in zip(args.rect, labels)
+        )
+        return Hint(
+            kind="steps",
+            x=0,
+            y=0,
+            items=items,
+            duration_ms=args.duration_ms,
+        )
+
     return Hint(kind="cursor", x=args.x, y=args.y, duration_ms=args.duration_ms)
 
 
@@ -118,6 +150,12 @@ def hint_bounds(hint: Hint) -> tuple[int, int, int, int]:
     if hint.kind == "ring":
         radius = hint.diameter // 2
         return hint.x - radius, hint.y - radius, hint.diameter, hint.diameter
+    if hint.kind == "steps" and hint.items:
+        left = min(item[0] for item in hint.items)
+        top = min(item[1] for item in hint.items)
+        right = max(item[0] + item[2] for item in hint.items)
+        bottom = max(item[1] + item[3] for item in hint.items)
+        return left, top, right - left, bottom - top
     return hint.x - 28, hint.y - 28, 64, 72
 
 
@@ -265,27 +303,38 @@ class WindowsOverlay:
         return x - self.desktop[0], y - self.desktop[1]
 
     def _draw(self) -> None:
-        if self.hint.kind == "rect":
+        if self.hint.kind == "steps":
+            self._draw_steps()
+        elif self.hint.kind == "rect":
             self._draw_rect()
         elif self.hint.kind == "ring":
             self._draw_ring()
         else:
             self._draw_cursor()
 
+    def _draw_steps(self) -> None:
+        for index, (x, y, width, height, label) in enumerate(self.hint.items):
+            self._draw_rect_at(x, y, width, height, label)
+
     def _draw_rect(self) -> None:
-        x, y = self._local(self.hint.x, self.hint.y)
-        x2, y2 = x + self.hint.width, y + self.hint.height
+        self._draw_rect_at(
+            self.hint.x, self.hint.y, self.hint.width, self.hint.height, self.hint.label
+        )
+
+    def _draw_rect_at(self, x: int, y: int, width: int, height: int, label: str) -> None:
+        x, y = self._local(x, y)
+        x2, y2 = x + width, y + height
         self.canvas.create_rectangle(
             x - 3, y - 3, x2 + 3, y2 + 3, outline=ORANGE, width=6
         )
         self.canvas.create_rectangle(
             x - 8, y - 8, x2 + 8, y2 + 8, outline="#ffb15c", width=2
         )
-        if self.hint.label:
+        if label:
             text = self.canvas.create_text(
-                x + self.hint.width / 2,
+                x + width / 2,
                 y2 + 18,
-                text=self.hint.label,
+                text=label,
                 fill="white",
                 font=("Segoe UI", 12, "bold"),
             )
