@@ -117,6 +117,7 @@ A window-only capture can show the transparent color key as a solid background w
 3. **Foreground theft.** Do not remove `WS_EX_NOACTIVATE` or the `WM_MOUSEACTIVATE` handler.
 4. **False click-through test.** UIA Invoke can bypass ordinary hit testing. Prefer a human click through the visible overlay and verify resulting application state.
 5. **Orphaned overlays.** Keep durations short and inspect background processes after interrupted demos.
+6. **Start menu / shell surfaces.** The overlay does NOT render above the Windows Start menu (or lock screen, UAC, some XAML/DWM surfaces) — they live above `HWND_TOPMOST`. Verified Win11 26100 (2026-08). Fall back to plain-text instruction for targets inside the Start menu; resume overlays once the target app window is open.
 
 ## Verification Checklist
 

@@ -118,6 +118,14 @@ Do not reuse stale coordinates after a window moves, resizes, changes DPI, or mo
 
 Some window-only capture APIs display the transparent color key as a solid background when capturing the overlay window in isolation. That is a capture artifact; verify the composited desktop and actual click-through behavior instead.
 
+## Known limitation: Windows Start menu (and shell surfaces)
+
+The overlay does **not** render on top of the Windows **Start menu** (or other shell-level surfaces that live above normal topmost windows — e.g. the lock screen, UAC prompts, and some XAML/DWM surfaces). The Start menu is a special shell layer that sits above `HWND_TOPMOST` Tk windows, so a hint positioned over it is invisible to the user.
+
+Verified on Win11 26100 (2026-08): a `rect` hint over the Start search box rendered, but ended up **behind** the menu. The overlay still works fine over normal applications (win32 Calculator, UWP Settings, Explorer, browsers).
+
+When the target you want to point at lives inside the Start menu, guide the user with a plain-text instruction instead of an overlay (e.g. "type `Personalizar` in the search box and press Enter"), then resume overlays once the app window is open.
+
 ## Motivation
 
 This is a small Windows-focused implementation of the visual-guidance idea explored in [`slapash/screen-overlay-spike`](https://github.com/slapash/screen-overlay-spike). It does not port that project's Qt/QML, Wayland, KWin, D-Bus, or AT-SPI architecture.
