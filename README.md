@@ -38,6 +38,7 @@ Coordinates are physical virtual-desktop screen coordinates. Negative coordinate
 cursor X Y
 ring X Y --diameter N
 rect X Y WIDTH HEIGHT [--label TEXT]
+steps --rect X Y WIDTH HEIGHT [--label TEXT] [--rect ...]...
 ```
 
 Every command accepts:
@@ -47,6 +48,21 @@ Every command accepts:
 ```
 
 Default duration: `2500` ms.
+
+### Multi-step guidance
+
+`steps` outlines several controls at once — ideal for guided flows where the human follows a numbered sequence. Labels show a step counter (`N/M`), and all rectangles render together for the whole duration:
+
+```bash
+python tools/screen_hint.py steps \
+  --rect 131 457 77 51 --label "1/4  Click 2" \
+  --rect 288 457 76 51 --label "2/4  Click +" \
+  --rect 131 457 77 51 --label "3/4  Click 2" \
+  --rect 288 510 76 51 --label "4/4  Click =" \
+  --duration-ms 10000
+```
+
+The first real integration test guided a user through `2 + 2` in Windows Calculator — the final Calculator state reported `4`.
 
 ## Why clicks pass through
 
@@ -101,6 +117,14 @@ Do not reuse stale coordinates after a window moves, resizes, changes DPI, or mo
 ## Capture caveat
 
 Some window-only capture APIs display the transparent color key as a solid background when capturing the overlay window in isolation. That is a capture artifact; verify the composited desktop and actual click-through behavior instead.
+
+## Known limitation: Windows Start menu (and shell surfaces)
+
+The overlay does **not** render on top of the Windows **Start menu** (or other shell-level surfaces that live above normal topmost windows — e.g. the lock screen, UAC prompts, and some XAML/DWM surfaces). The Start menu is a special shell layer that sits above `HWND_TOPMOST` Tk windows, so a hint positioned over it is invisible to the user.
+
+Verified on Win11 26100 (2026-08): a `rect` hint over the Start search box rendered, but ended up **behind** the menu. The overlay still works fine over normal applications (win32 Calculator, UWP Settings, Explorer, browsers).
+
+When the target you want to point at lives inside the Start menu, guide the user with a plain-text instruction instead of an overlay (e.g. "type `Personalizar` in the search box and press Enter"), then resume overlays once the app window is open.
 
 ## Motivation
 

@@ -50,6 +50,61 @@ class ScreenHintArgumentsTests(unittest.TestCase):
         hint = self.module.parse_cli(["rect", "-100", "20", "50", "50"])
         self.module.validate_against_desktop(hint, (-1920, 0, 3840, 1080))
 
+    def test_steps_parses_multiple_rects_with_labels(self):
+        hint = self.module.parse_cli(
+            [
+                "steps",
+                "--rect", "131", "457", "77", "51",
+                "--label", "1/4  Click 2",
+                "--rect", "288", "457", "76", "51",
+                "--label", "2/4  Click +",
+                "--duration-ms", "5000",
+            ]
+        )
+        self.assertEqual(hint.kind, "steps")
+        self.assertEqual(len(hint.items), 2)
+        self.assertEqual(hint.items[0], (131, 457, 77, 51, "1/4  Click 2"))
+        self.assertEqual(hint.items[1], (288, 457, 76, 51, "2/4  Click +"))
+        self.assertEqual(hint.duration_ms, 5000)
+
+    def test_steps_requires_rect_count_to_match_labels(self):
+        with self.assertRaisesRegex(ValueError, "label count"):
+            self.module.parse_cli(
+                [
+                    "steps",
+                    "--rect", "131", "457", "77", "51",
+                    "--rect", "288", "457", "76", "51",
+                    "--label", "1/4  Click 2",
+                ]
+            )
+
+    def test_steps_missing_labels_are_padded_empty(self):
+        hint = self.module.parse_cli(
+            ["steps", "--rect", "131", "457", "77", "51"]
+        )
+        self.assertEqual(hint.items[0][4], "")
+
+    def test_steps_bounds_span_all_rects(self):
+        hint = self.module.parse_cli(
+            [
+                "steps",
+                "--rect", "100", "100", "50", "50",
+                "--rect", "300", "200", "40", "30",
+            ]
+        )
+        self.assertEqual(self.module.hint_bounds(hint), (100, 100, 240, 130))
+
+    def test_steps_must_intersect_virtual_desktop(self):
+        hint = self.module.parse_cli(
+            [
+                "steps",
+                "--rect", "2500", "2500", "50", "50",
+                "--rect", "2600", "2600", "40", "40",
+            ]
+        )
+        with self.assertRaisesRegex(ValueError, "virtual desktop"):
+            self.module.validate_against_desktop(hint, (0, 0, 1920, 1080))
+
     def test_hit_test_and_mouse_activation_are_noninteractive(self):
         self.assertEqual(self.module.overlay_message_result(self.module.WM_NCHITTEST), self.module.HTTRANSPARENT)
         self.assertEqual(self.module.overlay_message_result(self.module.WM_MOUSEACTIVATE), self.module.MA_NOACTIVATE)
