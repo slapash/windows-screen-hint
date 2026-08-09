@@ -303,6 +303,31 @@ def _rect_of(com_rect) -> Tuple[int, int, int, int]:
     return left, top, max(0, right - left), max(0, bottom - top)
 
 
+def _walk_descendants(walker, root, max_nodes: int):
+    """Yield at most ``max_nodes`` descendants without materializing the tree.
+
+    UIA's FindAll(TreeScope_Descendants, ...) builds the full descendant
+    collection before the caller can enforce its limit.  An explicit stack
+    keeps probing bounded for large accessibility trees.
+    """
+    first = walker.GetFirstChildElement(root)
+    if first is None:
+        return
+    pending = [first]
+    visited = 0
+    while pending and visited < max_nodes:
+        node = pending.pop()
+        visited += 1
+        sibling = walker.GetNextSiblingElement(node)
+        child = walker.GetFirstChildElement(node)
+        # Stack is LIFO: sibling first preserves a depth-first UI order.
+        if sibling is not None:
+            pending.append(sibling)
+        if child is not None:
+            pending.append(child)
+        yield node
+
+
 def probe_window(
     hwnd: int,
     *,
@@ -310,20 +335,19 @@ def probe_window(
     max_elements: int = 500,
     include_empty: bool = False,
 ) -> List[Element]:
-    UIA = _uia()[1]
-    automation = _uia()[0]
+    automation, UIA = _uia()
     root = automation.ElementFromHandle(ctypes.c_void_p(hwnd))
     if root is None:
         raise RuntimeError(f"UIA: no element for window {hwnd}")
 
-    condition = automation.CreateTrueCondition()
-    found = root.FindAll(UIA.TreeScope_Descendants, condition)
+    if max_elements <= 0:
+        return []
+    walker = automation.CreateTreeWalker(automation.CreateTrueCondition())
 
     elements: List[Element] = []
     role_id = ROLE_TO_ID.get(role_filter) if role_filter else None
 
-    for i in range(found.Length):
-        node = found.GetElement(i)
+    for node in _walk_descendants(walker, root, max_elements):
         try:
             name = node.CurrentName or ""
             ctype = int(node.CurrentControlType)
@@ -357,8 +381,6 @@ def probe_window(
                 window_id=hwnd,
             )
         )
-        if len(elements) >= max_elements:
-            break
     return elements
 
 

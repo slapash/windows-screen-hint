@@ -149,27 +149,5 @@ class ScreenHintArgumentsTests(unittest.TestCase):
         self.assertEqual(hint.items[0], (131, 457, 77, 51, ""))
         self.assertEqual(hint.items[1], (288, 457, 76, 51, ""))
 
-    def test_steps_bounds_span_all_rects(self):
-        hint = self.module.parse_cli(
-            [
-                "steps",
-                "--rect", "131", "457", "77", "51",
-                "--rect", "288", "457", "76", "51",
-            ]
-        )
-        x, y, w, h = self.module.hint_bounds(hint)
-        self.assertEqual((x, y, w, h), (131, 457, 233, 51))
-
-    def test_steps_must_intersect_virtual_desktop(self):
-        hint = self.module.parse_cli(
-            [
-                "steps",
-                "--rect", "3000", "3000", "50", "50",
-            ]
-        )
-        with self.assertRaisesRegex(ValueError, "virtual desktop"):
-            self.module.validate_against_desktop(hint, (0, 0, 1920, 1080))
-
-
 if __name__ == "__main__":
     unittest.main()

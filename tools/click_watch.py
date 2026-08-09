@@ -87,7 +87,7 @@ class ClickWatch:
 
     def _in_target(self, px: int, py: int) -> bool:
         x, y, w, h = self.target
-        return x <= px <= x + w and y <= py <= y + h
+        return x <= px < x + w and y <= py < y + h
 
     def _callback(self, n_code: int, wparam: int, lparam: int) -> int:
         if n_code == 0:  # HC_ACTION
@@ -202,6 +202,9 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         return 2
     if args.x is not None and args.y is None:
         print("click_watch: --y is required with --x", file=sys.stderr)
+        return 2
+    if args.x is not None and (args.w <= 0 or args.h <= 0):
+        print("click_watch: --w and --h must be positive with --x", file=sys.stderr)
         return 2
     try:
         _enable_per_monitor_dpi_awareness()

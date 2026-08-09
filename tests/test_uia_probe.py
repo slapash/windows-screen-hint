@@ -41,6 +41,30 @@ class UiaProbeScoreTests(unittest.TestCase):
         self.assertEqual(self.module._score("save", ""), 0.0)
 
 
+class UiaProbeTraversalTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.module = load_module()
+
+    def test_descendant_walk_is_depth_first_and_bounded(self):
+        root, a, a1, b = object(), object(), object(), object()
+
+        class Walker:
+            children = {root: a, a: a1, a1: None, b: None}
+            siblings = {a: b, a1: None, b: None}
+
+            def GetFirstChildElement(self, node):
+                return self.children.get(node)
+
+            def GetNextSiblingElement(self, node):
+                return self.siblings.get(node)
+
+        self.assertEqual(
+            list(self.module._walk_descendants(Walker(), root, max_nodes=2)),
+            [a, a1],
+        )
+
+
 class UiaProbeFuzzyFindTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
