@@ -22,11 +22,11 @@ class ClickWatchGeometryTests(unittest.TestCase):
     def test_inside(self):
         self.assertTrue(self._in_target(100, 100, 50, 50, 120, 120))
 
-    def test_edge_right_inclusive(self):
-        self.assertTrue(self._in_target(100, 100, 50, 50, 150, 125))
+    def test_edge_right_exclusive(self):
+        self.assertFalse(self._in_target(100, 100, 50, 50, 150, 125))
 
-    def test_edge_bottom_inclusive(self):
-        self.assertTrue(self._in_target(100, 100, 50, 50, 125, 150))
+    def test_edge_bottom_exclusive(self):
+        self.assertFalse(self._in_target(100, 100, 50, 50, 125, 150))
 
     def test_outside_left(self):
         self.assertFalse(self._in_target(100, 100, 50, 50, 99, 125))
@@ -56,6 +56,18 @@ class ClickWatchCliTests(unittest.TestCase):
         )
         self.assertEqual(r.returncode, 2)
         self.assertIn("--y", r.stderr)
+
+    def test_missing_or_nonpositive_dimensions_rejected(self):
+        import subprocess
+        import sys as _sys
+
+        for dimensions in ([], ["--w", "0", "--h", "1"], ["--w", "1", "--h", "-1"]):
+            r = subprocess.run(
+                [_sys.executable, str(MODULE_PATH), "--x", "10", "--y", "10", *dimensions],
+                capture_output=True, text=True, timeout=30,
+            )
+            self.assertEqual(r.returncode, 2)
+            self.assertIn("--w and --h", r.stderr)
 
     def test_tiny_timeout_rejected(self):
         import subprocess
